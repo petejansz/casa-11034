@@ -1,0 +1,11 @@
+﻿Scenario,EmailVerified, New-EmailVerified, PP-Status, New-PP-Status, SecondChance-Status, New-SecondChance-Status, PlayerID-Count
+1,TRUE,FALSE,Preactive (1),Suspended,Preactive (1),Suspended,905160
+2,TRUE,-,Preactive (1),Active,Active (2),-,3519
+3,FALSE,-,Suspended (3),-,Preactive (1),Suspended,14
+4,TRUE,-,Active (2),-,Preactive (1),Active,8
+5,TRUE,FALSE,Suspended (3),-,Preactive (1),Suspended,3
+6,TRUE,FALSE,Preactive (1),Suspended,Suspended (3),-,2
+7,TRUE,FALSE,Active (2),Suspended,Suspended (3),-,1
+8,TRUE,FALSE,Suspended (3),-,Active (2),Suspended,2
+9,FALSE,-,Active (2),Preactive,Active (2),Preactive,1450
+10,TRUE,FALSE,Suspended (3),-,Suspended (3),-,98228

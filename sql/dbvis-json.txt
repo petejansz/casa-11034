@@ -1,0 +1,25 @@
+@export on;
+@export set QuoteTextData=Double filename="C:\Users\pjansz\Documents\pd\sql\casa-11034\smile.json";
+--select * from gms4.sms_customer_contacts;
+-- List all players with PP, 2ndChance service and active|preactive|suspended
+--PlayerPortalService = cs.service_type_id = 1 
+--SecondChanceService  = cs.service_type_id = 500
+--
+--Preactive = 1
+--Active = 2
+--Suspended =3
+--
+--EmailVerified = cc.status = 1
+--EmailNotVerified = cc.status = 0
+
+select
+            c.contract_identity, c.contract_id, cc.status, cs.service_type_id, cs.service_status_id
+from        gms4.sms_contracts c
+inner join  gms4.sms_customer_contacts cc    on cc.contract_id  = c.contract_id
+inner join  gms4.sms_customer_services cs    on cs.contract_id  = c.contract_id
+
+where 
+        cc.contact_type_id = 1
+        and cs.service_type_id in (1, 500) and cs.service_status_id in (1, 2, 3);
+    
+@export off;
