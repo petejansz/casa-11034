@@ -1,3 +1,6 @@
+--!!! UNCOMMENT THE EXPORT STATEMENT !!!
+--EXPORT TO all-player-status.csv OF DEL
+
 select
     CONTRACT_IDENTITY,
     C_LAST_UPDATED,
@@ -10,13 +13,13 @@ select
 from (
 	select
 	c.contract_identity as CONTRACT_IDENTITY,
-	date(c.last_updated) as C_LAST_UPDATED,
+	to_char(date(c.last_updated), 'YYYY-MM-DD') as C_LAST_UPDATED,
 	cs.contract_id as CONTRACT_ID,
 	cc.status  as EMAIL_VERIFIED,
-	date(cc.last_updated) as CC_LAST_UPDATED,
+	to_char(date(cc.last_updated), 'YYYY-MM-DD') as CC_LAST_UPDATED,
 	cast(cs.service_type_id as varchar(3)) as SERVICE_TYPE_ID,
 	cast(cs.service_status_id as varchar(3)) as SERVICE_STATUS_ID,
-	date(cs.last_updated) as CS_LAST_UPDATED
+	to_char(date(cs.last_updated), 'YYYY-MM-DD') as CS_LAST_UPDATED
 	from gms4.sms_customer_services cs
 		inner join gms4.sms_customer_contacts cc on cc.contract_id = cs.contract_id
 		inner join gms4.sms_contracts c on c.contract_id = cc.contract_id
@@ -28,3 +31,4 @@ from (
 	group by c.contract_identity, c.last_updated, cs.contract_id, cc.status, cc.last_updated, cs.service_type_id, cs.service_status_id, cs.last_updated 
 	)
 group by contract_identity, C_LAST_UPDATED, contract_id, email_verified, CC_LAST_UPDATED, CS_LAST_UPDATED
+;

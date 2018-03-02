@@ -1,6 +1,8 @@
 param
 (
+    [switch]    $getplayers,
     [string]    $system,
+    [switch]    $update,
     [switch]    $help,
     [switch]    $h
 )
@@ -21,26 +23,41 @@ function showHelp()
 {
     Write-Output "USAGE: $ScriptName [option] -system <cat1 | cat2 | apl | dev>"
     Write-Output "  option"
+    Write-Output "    -getplayers - Get all players to {system}-all.csv"
+    Write-Output "    -update - Perform Updates"
     exit 1
 }
 
+function doUpdates($dbCon, $sqlFileName)
+{
+    Write-Host "$system : Updating player service state..."
+    dbviscmd -connection $dbCon -stoponerror -sqlfile $sqlFileName | out-null
+    if ($? -eq $False) {exit 1}
+}
+
+function isEmailVerified( $pdAdminHost, $contractIdentity)
+{
+    $perObj = pd2-admin --api per --host $pdAdminHost --playerid $contractIdentity | convertfrom-json
+    return $perObj.emails[0].verified
+}
+
 if ($h -or $help) {showHelp}
-if ( $system -and $system -match "cat1|cat2|apl|dev" ) { } else {showHelp}
+if ( $system -and $system -match "apl|cat1|cat2|dev|localhost" ) { } else {showHelp}
 
 $projectDir = "$env:USERPROFILE\Documents\MyProjects\igt\pd\casa-11034"
 
-$pdAdminHost = 'pdadmin'
+$pdAdminHost = $system
 $env:PATH = "$projectDir\script;$env:PATH"
 cd "$projectDir\$system"
 
 if ($system -match "^dev$")
 {
-    $dbCon = 'ca-pd-dev'
+    $dbCon = "ca-pd-${system}"
     Write-Host "Testing $system , $dbCon ..."
     Write-Host "$system : Reseting service status on player accounts..."
-    exec-sql -con $dbCon -sqlfile reset-dev-update-activate.sql  | out-null
-    exec-sql -con $dbCon -sqlfile reset-dev-update-preactivate.sql | out-null
-    exec-sql -con $dbCon -sqlfile reset-dev-update-suspended.sql | out-null
+    exec-sql -con $dbCon -sqlfile "reset-${system}-update-activate.sql"  | out-null
+    exec-sql -con $dbCon -sqlfile "reset-${system}-update-preactivate.sql" | out-null
+    exec-sql -con $dbCon -sqlfile "reset-${system}-update-suspended.sql" | out-null
     if ($? -eq $False) {exit 1}
 }
 else
@@ -48,33 +65,38 @@ else
     $dbCon = 'Tunnel-DB'
 }
 
-Write-Host "$system : Getting all players, service status..."
-exec-sql -con $dbCon -sqlfile "../sql/ls-all-player-emailverfied-service-state.sql" -exportFile "dev-all.csv" | out-null
-if ($? -eq $False) {exit 1}
+if ($getplayers)
+{
+    Write-Host "$system : Getting all players, service status..."
+    exec-sql -con $dbCon -sqlfile "../sql/ls-all-player-emailverfied-service-state.sql" -exportFile "${system}-all.csv" | out-null
+    if ($? -eq $False) {exit 1}
+}
 
 foreach ($sqlJsFile in (ls ../script/*.sql.js))
 {
     $sqlFileName = $sqlJsFile.name -replace "\.js$", ''
     $fullSqlJsFilename = ${sqlJsFile}.Fullname
 
-    Write-Host "ch-pd-service-status.js --csvfile dev-all.csv --sqlt $fullSqlJsFilename --of $sqlFileName"
-    ch-pd-service-status.js --csvfile dev-all.csv --sqlt $fullSqlJsFilename --of $sqlFileName
+    Write-Host "ch-pd-service-status.js --csvfile ${system}-all.csv --sqlt $fullSqlJsFilename --of $sqlFileName"
+    ch-pd-service-status.js --csvfile ${system}-all.csv --sqlt $fullSqlJsFilename --of $sqlFileName
     if ($? -eq $False) {exit 1}
 
-    Write-Host "$system : Updating player service state..."
-    dbviscmd -connection $dbCon -stoponerror -sqlfile $sqlFileName | out-null
-    if ($? -eq $False) {exit 1}
+    if ($update)
+    {
+        doUpdates $dbCon $sqlFileName
+    }
 
     $contractIdentityList = grep "contract_identity" $sqlFileName | ForEach-Object {$_.split()[3] -replace ',', ''}
 
     foreach ($contractIdentity in $contractIdentityList)
     {
-        $profObj =        admin-players-profile -m pro -h $pdAdminHost -i $contractIdentity | ConvertFrom-Json
-        $emailVerified = (admin-players-profile -m per -h $pdAdminHost -i $contractIdentity | convertfrom-json).emails[0].verified
-        $playerState = "{0} {1} {2} {3} {4} {5}" -f $contractIdentity, `
-         $emailVerified, `
-         $profObj.services[0].serviceType, $profObj.services[0].status, `
-         $profObj.services[1].serviceType, $profObj.services[1].status
+        $emailVerified = isEmailVerified $pdAdminHost $contractIdentity
+        $proObj = pd2-admin --api pro --host $pdAdminHost --playerid $contractIdentity | ConvertFrom-Json
+        $playerState = "{0} {1} {2} {3} {4} {5}" -f `
+            $contractIdentity, `
+            $emailVerified, `
+            $proObj.services[0].serviceType, $proObj.services[0].status, `
+            $proObj.services[1].serviceType, $proObj.services[1].status
         Write-Host $playerState
     }
 }
