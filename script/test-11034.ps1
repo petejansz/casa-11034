@@ -25,7 +25,7 @@ function showHelp()
 }
 
 if ($h -or $help) {showHelp}
-if ( $system -and $system -match "cat1|cat2|apl|dev" ) { }else {showHelp}
+if ( $system -and $system -match "cat1|cat2|apl|dev" ) { } else {showHelp}
 
 $projectDir = "$env:USERPROFILE\Documents\MyProjects\igt\pd\casa-11034"
 
