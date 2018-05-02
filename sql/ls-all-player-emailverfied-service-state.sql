@@ -3,6 +3,7 @@
 
 select
     CONTRACT_IDENTITY,
+    ACCOUNT_EMAIL,
     C_LAST_UPDATED,
     CONTRACT_ID,
     EMAIL_VERIFIED,
@@ -13,6 +14,7 @@ select
 from (
 	select
 	c.contract_identity as CONTRACT_IDENTITY,
+	cc.value AS ACCOUNT_EMAIL,
 	to_char(date(c.last_updated), 'YYYY-MM-DD') as C_LAST_UPDATED,
 	cs.contract_id as CONTRACT_ID,
 	cc.status  as EMAIL_VERIFIED,
@@ -28,7 +30,7 @@ from (
 		    cc.contact_type_id = 1 and
             cs.service_type_id in ( 1, 500 )    -- PP or SC
             
-	group by c.contract_identity, c.last_updated, cs.contract_id, cc.status, cc.last_updated, cs.service_type_id, cs.service_status_id, cs.last_updated 
+	group by c.contract_identity, cc.value, c.last_updated, cs.contract_id, cc.status, cc.last_updated, cs.service_type_id, cs.service_status_id, cs.last_updated 
 	)
-group by contract_identity, C_LAST_UPDATED, contract_id, email_verified, CC_LAST_UPDATED, CS_LAST_UPDATED
+group by contract_identity, ACCOUNT_EMAIL, C_LAST_UPDATED, contract_id, email_verified, CC_LAST_UPDATED, CS_LAST_UPDATED
 ;

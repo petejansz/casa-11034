@@ -2,6 +2,7 @@ param
 (
     [switch]    $getplayers,
     [string]    $system,
+    [switch]    $genServiceCsvfile,
     [switch]    $update,
     [switch]    $help,
     [switch]    $h
@@ -19,11 +20,14 @@ trap [Exception]
 }
 
 $ScriptName = $MyInvocation.MyCommand.Name
+$ScriptDir = Split-Path $MyInvocation.MyCommand.Path
+
 function showHelp()
 {
     Write-Output "USAGE: $ScriptName [option] -system <cat1 | cat2 | apl | dev>"
     Write-Output "  option"
     Write-Output "    -getplayers - Get all players to {system}-all.csv"
+    Write-Output "    -genServiceCsvfile {system-service.csv"
     Write-Output "    -update - Perform Updates"
     exit 1
 }
@@ -41,14 +45,52 @@ function isEmailVerified( $pdAdminHost, $contractIdentity)
     return $perObj.emails[0].verified
 }
 
+function genServiceCsvfile()
+{
+    Write-Host "ch-pd-service-status.js --csvfile ${system}-all.csv --service-csv ${system}-update-service.csv"
+    ch-pd-service-status.js --csvfile ${system}-all.csv --service-csv "${system}-service.csv"
+    if ($? -eq $False) {exit 1}
+}
+function generateSqlFiles()
+{
+    foreach ($sqlJsFile in (ls ../script/*.sql.js))
+    {
+        $sqlFileName = $sqlJsFile.name -replace "\.js$", ''
+        $fullSqlJsFilename = ${sqlJsFile}.Fullname
+
+        Write-Host "ch-pd-service-status.js --csvfile ${system}-all.csv --sqlt $fullSqlJsFilename --of $sqlFileName"
+        ch-pd-service-status.js --csvfile ${system}-all.csv --sqlt $fullSqlJsFilename --of $sqlFileName
+        if ($? -eq $False) {exit 1}
+
+        if ($update)
+        {
+            doUpdates $dbCon $sqlFileName
+        }
+
+        $contractIdentityList = grep "contract_identity" $sqlFileName | ForEach-Object {$_.split()[3] -replace ',', ''}
+
+        foreach ($contractIdentity in $contractIdentityList)
+        {
+            $emailVerified = isEmailVerified $pdAdminHost $contractIdentity
+            $proObj = pd2-admin --api pro --host $pdAdminHost --playerid $contractIdentity | ConvertFrom-Json
+            $playerState = "{0} {1} {2} {3} {4} {5}" -f `
+                $contractIdentity, `
+                $emailVerified, `
+                $proObj.services[0].serviceType, $proObj.services[0].status, `
+                $proObj.services[1].serviceType, $proObj.services[1].status
+            Write-Host $playerState
+        }
+    }
+}
+
 if ($h -or $help) {showHelp}
 if ( $system -and $system -match "apl|cat1|cat2|dev|localhost" ) { } else {showHelp}
 
-$projectDir = "$env:USERPROFILE\Documents\MyProjects\igt\pd\casa-11034"
+$projectDir = (resolve-path "${ScriptDir}/..").ToString()
 
 $pdAdminHost = $system
 $env:PATH = "$projectDir\script;$env:PATH"
-cd "$projectDir\$system"
+Set-Location "$projectDir\$system"
 
 if ($system -match "^dev$")
 {
@@ -72,31 +114,7 @@ if ($getplayers)
     if ($? -eq $False) {exit 1}
 }
 
-foreach ($sqlJsFile in (ls ../script/*.sql.js))
+if ($genServiceCsvfile)
 {
-    $sqlFileName = $sqlJsFile.name -replace "\.js$", ''
-    $fullSqlJsFilename = ${sqlJsFile}.Fullname
-
-    Write-Host "ch-pd-service-status.js --csvfile ${system}-all.csv --sqlt $fullSqlJsFilename --of $sqlFileName"
-    ch-pd-service-status.js --csvfile ${system}-all.csv --sqlt $fullSqlJsFilename --of $sqlFileName
-    if ($? -eq $False) {exit 1}
-
-    if ($update)
-    {
-        doUpdates $dbCon $sqlFileName
-    }
-
-    $contractIdentityList = grep "contract_identity" $sqlFileName | ForEach-Object {$_.split()[3] -replace ',', ''}
-
-    foreach ($contractIdentity in $contractIdentityList)
-    {
-        $emailVerified = isEmailVerified $pdAdminHost $contractIdentity
-        $proObj = pd2-admin --api pro --host $pdAdminHost --playerid $contractIdentity | ConvertFrom-Json
-        $playerState = "{0} {1} {2} {3} {4} {5}" -f `
-            $contractIdentity, `
-            $emailVerified, `
-            $proObj.services[0].serviceType, $proObj.services[0].status, `
-            $proObj.services[1].serviceType, $proObj.services[1].status
-        Write-Host $playerState
-    }
+    genServiceCsvfile
 }
