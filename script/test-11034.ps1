@@ -26,8 +26,8 @@ function showHelp()
 {
     Write-Output "USAGE: $ScriptName [option] -system <cat1 | cat2 | apl | dev>"
     Write-Output "  option"
-    Write-Output "    -getplayers - Get all players to {system}-all.csv"
-    Write-Output "    -genServiceCsvfile {system-service.csv"
+    Write-Output "    -getplayers                             # Get all players to {system}-all.csv"
+    Write-Output "    -genServiceCsvfile {system}-service.csv # Generate PD updateservice csv file"
     Write-Output "    -update - Perform Updates"
     exit 1
 }
@@ -110,7 +110,7 @@ else
 if ($getplayers)
 {
     Write-Host "$system : Getting all players, service status..."
-    exec-sql -con $dbCon -sqlfile "../sql/ls-all-player-emailverfied-service-state.sql" -exportFile "${system}-all.csv" | out-null
+    exec-sql -con $dbCon -sqlfile "${projectDir}/sql/ls-all-player-emailverfied-service-state.sql" -exportFile "${system}-all.csv" | out-null
     if ($? -eq $False) {exit 1}
 }
 
