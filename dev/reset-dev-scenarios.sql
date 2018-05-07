@@ -138,3 +138,30 @@ update gms4.sms_contracts set last_updated = current timestamp
 where contract_id = 6108;
 commit;
 
+-- Scenario 11, verfified/active/active - ignore/don't process 1000006108, testb@yopmail.com
+update gms4.sms_customer_services set service_status_id = 2, last_updated = current timestamp
+where contract_id = 6109 AND service_type_id IN ( 1 );
+
+update gms4.sms_customer_services set service_status_id = 2, last_updated = current timestamp
+where contract_id = 6109 AND service_type_id IN ( 500 );
+
+update gms4.sms_customer_contacts set status = 1, last_updated = current timestamp
+where contract_id = 6109;
+
+update gms4.sms_contracts set last_updated = current timestamp
+where contract_id = 6109;
+commit;
+
+-- Scenario 12, not_verfified/preactive/preactive - ignore/don't process 1000006109, testc@yopmail.com
+update gms4.sms_customer_services set service_status_id = 1, last_updated = current timestamp
+where contract_id = 6110 AND service_type_id IN ( 1 );
+
+update gms4.sms_customer_services set service_status_id = 1, last_updated = current timestamp
+where contract_id = 6110 AND service_type_id IN ( 500 );
+
+update gms4.sms_customer_contacts set status = 0, last_updated = current timestamp
+where contract_id = 6110;
+
+update gms4.sms_contracts set last_updated = current timestamp
+where contract_id = 6110;
+commit;

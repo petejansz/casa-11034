@@ -3,6 +3,7 @@ param
     [switch]    $getplayers,
     [string]    $system,
     [switch]    $genServiceCsvfile,
+    [switch]    $report,
     [switch]    $update,
     [switch]    $help,
     [switch]    $h
@@ -29,6 +30,7 @@ function showHelp()
     Write-Output "    -getplayers                             # Get all players to {system}-all.csv"
     Write-Output "    -genServiceCsvfile {system}-updateservice.csv # Generate PD updateservice csv file"
     Write-Output "    -update - Perform Updates"
+    Write-Output "    -report - ch-pd-service-status --report"
     exit 1
 }
 
@@ -48,7 +50,9 @@ function isEmailVerified( $pdAdminHost, $contractIdentity)
 function genServiceCsvfile()
 {
     Write-Host "ch-pd-service-status.js --csvfile ${system}-all.csv --service-csv ${system}-updateservice.csv"
-    ch-pd-service-status.js --csvfile ${system}-all.csv --service-csv "${system}-updateservice.csv"
+    $reportArg = ""
+    if ($report) {$reportArg = "--report"}
+    ch-pd-service-status.js --csvfile ${system}-all.csv --service-csv "${system}-updateservice.csv" $reportArg
     if ($? -eq $False) {exit 1}
 }
 function generateSqlFiles()

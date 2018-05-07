@@ -43,7 +43,11 @@ else
     inputStream = process.stdin
 }
 
-const EMAIL_VERIFIED = 1
+const emailVerifiedStatus =
+{
+    NOT_VERIFIED: 0,
+    VERIFIED: 1
+}
 const PREACTIVE = 1
 const ACTIVE = 2
 const SUSPEND = 3
@@ -79,25 +83,28 @@ inputStream
         if ( player.portalService == SUSPEND || player.secondChanceService == SUSPEND ) // 3, 5, 6, 7, 8, 10
         {
             player.newState = SUSPEND
+            player.emailVerified = emailVerifiedStatus.NOT_VERIFIED
         }
         else if ( player.emailVerified && player.portalService == PREACTIVE && player.secondChanceService == PREACTIVE ) // 1
         {
             player.newState = SUSPEND
+            player.emailVerified = emailVerifiedStatus.NOT_VERIFIED
         }
         else if ( player.emailVerified && player.portalService == PREACTIVE && player.secondChanceService == ACTIVE )  //  2
         {
             player.newState = ACTIVE
+            player.emailVerified = emailVerifiedStatus.VERIFIED
         }
         else if ( player.emailVerified && player.portalService == ACTIVE && player.secondChanceService == PREACTIVE )  //  4
         {
             player.newState = ACTIVE
+            player.emailVerified = emailVerifiedStatus.VERIFIED
         }
         else if ( !player.emailVerified && player.portalService == ACTIVE && player.secondChanceService == ACTIVE )  //  9
         {
             player.newState = PREACTIVE
+            player.emailVerified = emailVerifiedStatus.NOT_VERIFIED
         }
-
-        player.emailVerified = player.newState == ACTIVE ? EMAIL_VERIFIED : 0
 
         if ( player.newState == ACTIVE || player.newState == PREACTIVE || player.newState == SUSPEND )
         {

@@ -30,7 +30,7 @@ from (
         inner join gms4.sms_customer_contacts cc on cc.contract_id = cs.contract_id
         inner join gms4.sms_contracts c on c.contract_id = cc.contract_id
         where
---        cc.value IN ('test11@yopmail.com','test12@yopmail.com','test13@yopmail.com','test14@yopmail.com','test15@yopmail.com','test16@yopmail.com','test17@yopmail.com','test18@yopmail.com','test19@yopmail.com','testa@yopmail.com') and
+        cc.value IN ('test11@yopmail.com','test12@yopmail.com','test13@yopmail.com','test14@yopmail.com','test15@yopmail.com','test16@yopmail.com','test17@yopmail.com','test18@yopmail.com','test19@yopmail.com','testa@yopmail.com','testb@yopmail.com','testc@yopmail.com') and
             c.contract_status_id != 6 and -- hidden
             cc.contact_type_id = 1 and
             cs.service_type_id in ( 1, 500 )    -- PP or SC
