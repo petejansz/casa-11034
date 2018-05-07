@@ -20,11 +20,11 @@ program
 
 process.exitCode = 1
 
-// if ( !program.sqlt )
-// {
-//     program.help()
-//     process.exit()
-// }
+if ( !program.help )
+{
+    program.help()
+    process.exit()
+}
 
 var sqlt
 if ( program.sqlt )
@@ -77,15 +77,27 @@ inputStream
         player.newState = null
 
         if ( player.portalService == SUSPEND || player.secondChanceService == SUSPEND ) // 3, 5, 6, 7, 8, 10
-        { player.newState = SUSPEND }
+        {
+            player.newState = SUSPEND
+        }
         else if ( player.emailVerified && player.portalService == PREACTIVE && player.secondChanceService == PREACTIVE ) // 1
-        { player.newState = SUSPEND }
+        {
+            player.newState = SUSPEND
+        }
         else if ( player.emailVerified && player.portalService == PREACTIVE && player.secondChanceService == ACTIVE )  //  2
-        { player.newState = ACTIVE }
+        {
+            player.newState = ACTIVE
+        }
         else if ( player.emailVerified && player.portalService == ACTIVE && player.secondChanceService == PREACTIVE )  //  4
-        { player.newState = ACTIVE }
+        {
+            player.newState = ACTIVE
+        }
         else if ( !player.emailVerified && player.portalService == ACTIVE && player.secondChanceService == ACTIVE )  //  9
-        { player.newState = PREACTIVE }
+        {
+            player.newState = PREACTIVE
+        }
+
+        player.emailVerified = player.newState == ACTIVE ? EMAIL_VERIFIED : 0
 
         if ( player.newState == ACTIVE || player.newState == PREACTIVE || player.newState == SUSPEND )
         {
@@ -124,7 +136,7 @@ function wrServiceCsv( players )
     {
         var player = players[i]
         var csvLine = util.format( '%s,%s,%s,%s\n',
-            player.accountEmail, player.portalService, player.secondChanceService, player.emailVerified )
+            player.accountEmail, player.newState, player.newState, player.emailVerified )
         fs.appendFileSync( program.serviceCsv, csvLine )
     }
 }
@@ -173,10 +185,15 @@ function convertCsvRecordToPlayer( csvRecord )
             customerServiceLastUpdated: csvRecord.CS_LAST_UPDATED.trim()
         }
 
-    if ( csvRecord.SERVICE_STATUS_IDS.includes( ',' ) )
+    if ( csvRecord.SERVICE_TYPE_IDS.match("^1, 500") && csvRecord.SERVICE_STATUS_IDS.includes( ',' ) )
     {
         player.portalService = parseInt( csvRecord.SERVICE_STATUS_IDS.split( ',' )[0].trim() )
         player.secondChanceService = parseInt( csvRecord.SERVICE_STATUS_IDS.split( ',' )[1].trim() )
+    }
+    else if ( csvRecord.SERVICE_TYPE_IDS.match("^500, 1") && csvRecord.SERVICE_STATUS_IDS.includes( ',' ) )
+    {
+        player.portalService = parseInt( csvRecord.SERVICE_STATUS_IDS.split( ',' )[1].trim() )
+        player.secondChanceService = parseInt( csvRecord.SERVICE_STATUS_IDS.split( ',' )[0].trim() )
     }
 
     return player

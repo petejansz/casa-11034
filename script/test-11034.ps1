@@ -27,7 +27,7 @@ function showHelp()
     Write-Output "USAGE: $ScriptName [option] -system <cat1 | cat2 | apl | dev>"
     Write-Output "  option"
     Write-Output "    -getplayers                             # Get all players to {system}-all.csv"
-    Write-Output "    -genServiceCsvfile {system}-service.csv # Generate PD updateservice csv file"
+    Write-Output "    -genServiceCsvfile {system}-updateservice.csv # Generate PD updateservice csv file"
     Write-Output "    -update - Perform Updates"
     exit 1
 }
@@ -47,8 +47,8 @@ function isEmailVerified( $pdAdminHost, $contractIdentity)
 
 function genServiceCsvfile()
 {
-    Write-Host "ch-pd-service-status.js --csvfile ${system}-all.csv --service-csv ${system}-update-service.csv"
-    ch-pd-service-status.js --csvfile ${system}-all.csv --service-csv "${system}-service.csv"
+    Write-Host "ch-pd-service-status.js --csvfile ${system}-all.csv --service-csv ${system}-updateservice.csv"
+    ch-pd-service-status.js --csvfile ${system}-all.csv --service-csv "${system}-updateservice.csv"
     if ($? -eq $False) {exit 1}
 }
 function generateSqlFiles()
@@ -97,9 +97,7 @@ if ($system -match "^dev$")
     $dbCon = "ca-pd-${system}"
     Write-Host "Testing $system , $dbCon ..."
     Write-Host "$system : Reseting service status on player accounts..."
-    exec-sql -con $dbCon -sqlfile "reset-${system}-update-activate.sql"  | out-null
-    exec-sql -con $dbCon -sqlfile "reset-${system}-update-preactivate.sql" | out-null
-    exec-sql -con $dbCon -sqlfile "reset-${system}-update-suspended.sql" | out-null
+    exec-sql -con $dbCon -sqlfile "reset-${system}-scenarios.sql" | out-null
     if ($? -eq $False) {exit 1}
 }
 else
