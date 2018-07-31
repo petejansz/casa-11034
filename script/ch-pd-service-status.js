@@ -15,7 +15,7 @@ program
     .option( '--sqlt [sqlt]', 'SQL template file' )
     .option( '--of [outputfile]', 'Write SQL to output file' )
     .option( '--report', 'Print players' )
-    .option( ' --service-csv [output-csv-file]', 'Write DLV update service csv file' )
+    .option( ' --service-csv [output-csv-file]', 'Write batch update service csv file' )
     .parse( process.argv )
 
 process.exitCode = 1
@@ -48,11 +48,16 @@ const emailVerifiedStatus =
     NOT_VERIFIED: 0,
     VERIFIED: 1
 }
-const PREACTIVE = 1
-const ACTIVE = 2
-const SUSPEND = 3
-const CLOSED = 4
-const COMPLETED = 5
+
+const ServiceStatus =
+{
+    PREACTIVE: 1,
+    ACTIVE: 2,
+    SUSPEND: 3,
+    CLOSED: 4,
+    COMPLETED: 5
+}
+
 var players = []
 
 if ( program.report )
@@ -69,10 +74,10 @@ inputStream
         var player = convertCsvRecordToPlayer( data )
 
         if (
-            player.portalService == CLOSED
-            || player.portalService == COMPLETED
-            || player.secondChanceService == CLOSED
-            || player.secondChanceService == COMPLETED
+            player.portalService == ServiceStatus.CLOSED
+            || player.portalService == ServiceStatus.COMPLETED
+            || player.secondChanceService == ServiceStatus.CLOSED
+            || player.secondChanceService == ServiceStatus.COMPLETED
         )
         {
             return
@@ -80,33 +85,33 @@ inputStream
 
         player.newState = null
 
-        if ( player.portalService == SUSPEND || player.secondChanceService == SUSPEND ) // 3, 5, 6, 7, 8, 10
+        if ( player.portalService == ServiceStatus.SUSPEND || player.secondChanceService == ServiceStatus.SUSPEND ) // 3, 5, 6, 7, 8, 10
         {
-            player.newState = SUSPEND
+            player.newState = ServiceStatus.SUSPEND
             player.emailVerified = emailVerifiedStatus.NOT_VERIFIED
         }
-        else if ( player.emailVerified && player.portalService == PREACTIVE && player.secondChanceService == PREACTIVE ) // 1
+        else if ( player.emailVerified && player.portalService == ServiceStatus.PREACTIVE && player.secondChanceService == ServiceStatus.PREACTIVE ) // 1
         {
-            player.newState = SUSPEND
+            player.newState = ServiceStatus.SUSPEND
             player.emailVerified = emailVerifiedStatus.NOT_VERIFIED
         }
-        else if ( player.emailVerified && player.portalService == PREACTIVE && player.secondChanceService == ACTIVE )  //  2
+        else if ( player.emailVerified && player.portalService == ServiceStatus.PREACTIVE && player.secondChanceService == ServiceStatus.ACTIVE )  //  2
         {
-            player.newState = ACTIVE
+            player.newState = ServiceStatus.ACTIVE
             player.emailVerified = emailVerifiedStatus.VERIFIED
         }
-        else if ( player.emailVerified && player.portalService == ACTIVE && player.secondChanceService == PREACTIVE )  //  4
+        else if ( player.emailVerified && player.portalService == ServiceStatus.ACTIVE && player.secondChanceService == ServiceStatus.PREACTIVE )  //  4
         {
-            player.newState = ACTIVE
+            player.newState = ServiceStatus.ACTIVE
             player.emailVerified = emailVerifiedStatus.VERIFIED
         }
-        else if ( !player.emailVerified && player.portalService == ACTIVE && player.secondChanceService == ACTIVE )  //  9
+        else if ( !player.emailVerified && player.portalService == ServiceStatus.ACTIVE && player.secondChanceService == ServiceStatus.ACTIVE )  //  9
         {
-            player.newState = PREACTIVE
+            player.newState = ServiceStatus.PREACTIVE
             player.emailVerified = emailVerifiedStatus.NOT_VERIFIED
         }
 
-        if ( player.newState == ACTIVE || player.newState == PREACTIVE || player.newState == SUSPEND )
+        if ( player.newState == ServiceStatus.ACTIVE || player.newState == ServiceStatus.PREACTIVE || player.newState == ServiceStatus.SUSPEND )
         {
             players.push( player )
 
@@ -153,17 +158,17 @@ function convertPlayerToFormattedString( player )
     var player2 = Object.assign( {}, player )
 
     player2.emailVerified = player2.emailVerified == 1 ? 'EMAIL_VERIFIED' : 'NOT_VERIFIED'
-    if ( player2.portalService == ACTIVE ) { player2.portalService = 'ACTIVE' }
-    if ( player2.portalService == SUSPEND ) { player2.portalService = 'SUSPEND' }
-    if ( player2.portalService == PREACTIVE ) { player2.portalService = 'PREACTIVE' }
+    if ( player2.portalService == ServiceStatus.ACTIVE ) { player2.portalService = 'ACTIVE' }
+    if ( player2.portalService == ServiceStatus.SUSPEND ) { player2.portalService = 'SUSPEND' }
+    if ( player2.portalService == ServiceStatus.PREACTIVE ) { player2.portalService = 'PREACTIVE' }
 
-    if ( player2.secondChanceService == ACTIVE ) { player2.secondChanceService = 'ACTIVE' }
-    if ( player2.secondChanceService == SUSPEND ) { player2.secondChanceService = 'SUSPEND' }
-    if ( player2.secondChanceService == PREACTIVE ) { player2.secondChanceService = 'PREACTIVE' }
+    if ( player2.secondChanceService == ServiceStatus.ACTIVE ) { player2.secondChanceService = 'ACTIVE' }
+    if ( player2.secondChanceService == ServiceStatus.SUSPEND ) { player2.secondChanceService = 'SUSPEND' }
+    if ( player2.secondChanceService == ServiceStatus.PREACTIVE ) { player2.secondChanceService = 'PREACTIVE' }
 
-    if ( player2.newState == ACTIVE ) { player2.newState = 'ACTIVE' }
-    if ( player2.newState == SUSPEND ) { player2.newState = 'SUSPEND' }
-    if ( player2.newState == PREACTIVE ) { player2.newState = 'PREACTIVE' }
+    if ( player2.newState == ServiceStatus.ACTIVE ) { player2.newState = 'ACTIVE' }
+    if ( player2.newState == ServiceStatus.SUSPEND ) { player2.newState = 'SUSPEND' }
+    if ( player2.newState == ServiceStatus.PREACTIVE ) { player2.newState = 'PREACTIVE' }
 
     var outputStr =
         player2.contractIdentity.toString().padStart( 17 )
