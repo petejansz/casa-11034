@@ -106,7 +106,7 @@ if ($system -match "^dev$")
 }
 else
 {
-    $dbCon = 'Tunnel-DB'
+    $dbCon = 'db-tunnel-1'
 }
 
 if ($getplayers)
