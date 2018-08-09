@@ -8,19 +8,20 @@ var csv = require( process.env.USERPROFILE + '/AppData/Roaming/npm/node_modules/
 var program = require( process.env.USERPROFILE + '/AppData/Roaming/npm/node_modules/commander' )
 
 program
-    .version( '0.0.1' )
-    .description( 'Change PD player service status SQL generator' )
+    .version( '2.0.19-SNAPSHOT' )
+    .description( 'Change PD service status by creating a batch updateservice CSV from an SQL export DEL file' )
     .usage( ' ARGS' )
     .option( '--csvfile [csvfile]', 'CSV file or stdin of CONTRACT_IDENTITY,CONTRACT_ID,EMAIL_VERIFIED,SERVICE_TYPE_IDS,SERVICE_STATUS_IDS' )
-    .option( '--sqlt [sqlt]', 'SQL template file' )
     .option( '--of [outputfile]', 'Write SQL to output file' )
     .option( '--report', 'Print players' )
-    .option( ' --service-csv [output-csv-file]', 'Write batch update service csv file' )
+    .option( '--restore-csv', 'Write a restore csv file to restore to original csvfile' )
+    .option( '--service-csv [output-csv-file]', 'Write batch update service csv file' )
+    .option( '--sqlt [sqlt]', 'SQL template file' )
     .parse( process.argv )
 
 process.exitCode = 1
 
-if ( !program.help )
+if ( !program.help ) //|| (!program.report && !program.serviceCsv))
 {
     program.help()
     process.exit()
@@ -32,7 +33,7 @@ if ( program.sqlt )
     sqlt = require( path.resolve( program.sqlt ) )
 }
 
-var inputStream
+var inputStream = null
 
 if ( program.csvfile )
 {
@@ -41,6 +42,17 @@ if ( program.csvfile )
 else
 {
     inputStream = process.stdin
+}
+
+if ( inputStream == null )
+{
+    program.help()
+    process.exit()
+}
+
+if ( program.restoreCsv )
+{
+    fs.writeFileSync( 'restore.csv', createServiceCsvHeader() )
 }
 
 const emailVerifiedStatus =
@@ -83,37 +95,29 @@ inputStream
             return
         }
 
-        player.newState = null
-
-        if ( player.portalService == ServiceStatus.SUSPEND || player.secondChanceService == ServiceStatus.SUSPEND ) // 3, 5, 6, 7, 8, 10
-        {
-            player.newState = ServiceStatus.SUSPEND
-            player.emailVerified = emailVerifiedStatus.NOT_VERIFIED
-        }
-        else if ( player.emailVerified && player.portalService == ServiceStatus.PREACTIVE && player.secondChanceService == ServiceStatus.PREACTIVE ) // 1
-        {
-            player.newState = ServiceStatus.SUSPEND
-            player.emailVerified = emailVerifiedStatus.NOT_VERIFIED
-        }
-        else if ( player.emailVerified && player.portalService == ServiceStatus.PREACTIVE && player.secondChanceService == ServiceStatus.ACTIVE )  //  2
-        {
-            player.newState = ServiceStatus.ACTIVE
-            player.emailVerified = emailVerifiedStatus.VERIFIED
-        }
-        else if ( player.emailVerified && player.portalService == ServiceStatus.ACTIVE && player.secondChanceService == ServiceStatus.PREACTIVE )  //  4
-        {
-            player.newState = ServiceStatus.ACTIVE
-            player.emailVerified = emailVerifiedStatus.VERIFIED
-        }
-        else if ( !player.emailVerified && player.portalService == ServiceStatus.ACTIVE && player.secondChanceService == ServiceStatus.ACTIVE )  //  9
-        {
-            player.newState = ServiceStatus.PREACTIVE
-            player.emailVerified = emailVerifiedStatus.NOT_VERIFIED
-        }
+        player = createNewState( player )
 
         if ( player.newState == ServiceStatus.ACTIVE || player.newState == ServiceStatus.PREACTIVE || player.newState == ServiceStatus.SUSPEND )
         {
             players.push( player )
+
+            if (program.restoreCsv)
+            {
+                var currentCsv = csvLine = util.format( '%s,%s,%s,%s\n',
+                player.accountEmail, player.portalService, player.secondChanceService, player.emailVerified )
+
+                fs.appendFileSync('restore.csv', currentCsv, err =>
+                {
+                    if (err)
+                    {
+                        throw err
+                    }
+                    else
+                    {
+                        console.log(currentCsv)
+                    }
+                })
+            }
 
             if ( program.report )
             {
@@ -136,11 +140,95 @@ inputStream
         process.exitCode = 0
     } )
 
+
 ///////////////////////////////////////////////////////////////////////////////
-function wrServiceCsv( players )
+/**
+ * Create newState to player and return player
+ * @param {*} player
+ */
+function createNewState( player )
+{
+    player.newState = null
+
+    // 1
+    if ( player.emailVerified && player.portalService == ServiceStatus.PREACTIVE && player.secondChanceService == ServiceStatus.PREACTIVE )
+    {
+        player.newState = ServiceStatus.SUSPEND
+        player.emailVerified = emailVerifiedStatus.VERIFIED
+    }
+    // 2
+    else if ( player.emailVerified && player.portalService == ServiceStatus.PREACTIVE && player.secondChanceService == ServiceStatus.ACTIVE )
+    {
+        player.newState = ServiceStatus.ACTIVE
+        player.emailVerified = emailVerifiedStatus.VERIFIED
+    }
+    // 3
+    else if ( !player.emailVerified && player.portalService == ServiceStatus.SUSPEND && player.secondChanceService == ServiceStatus.PREACTIVE )
+    {
+        player.newState = ServiceStatus.PREACTIVE
+        player.emailVerified = emailVerifiedStatus.NOT_VERIFIED
+    }
+    // 4
+    else if ( player.emailVerified && player.portalService == ServiceStatus.ACTIVE && player.secondChanceService == ServiceStatus.PREACTIVE )
+    {
+        player.newState = ServiceStatus.ACTIVE
+        player.emailVerified = emailVerifiedStatus.VERIFIED
+    }
+    // 5
+    else if ( player.emailVerified && player.portalService == ServiceStatus.SUSPEND && player.secondChanceService == ServiceStatus.PREACTIVE )
+    {
+        player.newState = ServiceStatus.SUSPEND
+        player.emailVerified = emailVerifiedStatus.VERIFIED
+    }
+    // 6
+    else if ( player.emailVerified && player.portalService == ServiceStatus.PREACTIVE && player.secondChanceService == ServiceStatus.SUSPEND )
+    {
+        player.newState = ServiceStatus.SUSPEND
+        player.emailVerified = emailVerifiedStatus.VERIFIED
+    }
+    // 7
+    else if ( player.emailVerified && player.portalService == ServiceStatus.ACTIVE && player.secondChanceService == ServiceStatus.SUSPEND )
+    {
+        player.newState = ServiceStatus.SUSPEND
+        player.emailVerified = emailVerifiedStatus.VERIFIED
+    }
+    // 8
+    else if ( player.emailVerified && player.portalService == ServiceStatus.SUSPEND && player.secondChanceService == ServiceStatus.ACTIVE )
+    {
+        player.newState = ServiceStatus.SUSPEND
+        player.emailVerified = emailVerifiedStatus.VERIFIED
+    }
+    // 9
+    else if ( !player.emailVerified && player.portalService == ServiceStatus.ACTIVE && player.secondChanceService == ServiceStatus.ACTIVE )
+    {
+        player.newState = ServiceStatus.PREACTIVE
+        player.emailVerified = emailVerifiedStatus.NOT_VERIFIED
+    }
+    // 10
+    else if ( player.emailVerified && player.portalService == ServiceStatus.SUSPEND && player.secondChanceService == ServiceStatus.SUSPEND )
+    {
+        // ignore
+    }
+    // 11
+    else if ( !player.emailVerified && player.portalService == ServiceStatus.SUSPEND && player.secondChanceService == ServiceStatus.SUSPEND )
+    {
+        player.newState = ServiceStatus.SUSPEND
+        player.emailVerified = emailVerifiedStatus.VERIFIED
+    }
+
+    return player
+}
+
+function createServiceCsvHeader()
 {
     var header = util.format( "# Generated by %s @ %s\n", path.basename( __filename ), Date() )
     header += util.format('# ACCOUNT_EMAIL,PORTAL_SERVICE,SECONDCHANCE_SERVICE,EMAIL_VERIFIED\n')
+    return header
+}
+
+function wrServiceCsv( players )
+{
+    var header = createServiceCsvHeader()
 
     fs.writeFileSync( program.serviceCsv, header )
 
