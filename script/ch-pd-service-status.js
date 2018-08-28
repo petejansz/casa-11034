@@ -1,11 +1,12 @@
 /**
  * Author: Pete Jansz
 */
+const modulesPath = '/usr/share/node_modules/'
 var fs = require( 'fs' )
 var path = require( 'path' )
 var util = require( 'util' )
-var csv = require( process.env.USERPROFILE + '/AppData/Roaming/npm/node_modules/csv-parser' )
-var program = require( process.env.USERPROFILE + '/AppData/Roaming/npm/node_modules/commander' )
+var csv = require( modulesPath + 'csv-parser' )
+var program = require( modulesPath + 'commander' )
 
 program
     .version( '2.0.19-SNAPSHOT' )
