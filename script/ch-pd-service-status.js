@@ -7,7 +7,7 @@ var path = require( 'path' )
 var util = require( 'util' )
 var csv = require( modulesPath + 'csv-parser' )
 var program = require( modulesPath + 'commander' )
-const CSV_FILE_HEADERS = 'CONTRACT_IDENTITY,ACCOUNT_EMAIL,C_LAST_UPDATED,CONTRACT_ID,EMAIL_VERIFIED,CC_LAST_UPDATED,SERVICE_TYPE_IDS,SERVICE_STATUS_IDS,CS_LAST_UPDATED'
+const CSV_FILE_HEADERS = 'CONTRACT_IDENTITY,ACCOUNT_EMAIL,CONTRACT_ID,EMAIL_VERIFIED,SERVICE_TYPE_IDS,SERVICE_STATUS_IDS'
 const RESTORE_FILENAME = 'ca_updateservice_restore.csv'
 
 program
@@ -76,19 +76,19 @@ inputStream
     .pipe( csv( CSV_FILE_HEADERS.split( ',' ) ) )
     .on( 'data', function ( data )
     {
-        var player = convertCsvRecordToPlayer( data )
+        var player1 = convertCsvRecordToPlayer( data )
 
         if (
-            player.portalService == ServiceStatus.CLOSED
-            || player.portalService == ServiceStatus.COMPLETED
-            || player.secondChanceService == ServiceStatus.CLOSED
-            || player.secondChanceService == ServiceStatus.COMPLETED
+            player1.portalService == ServiceStatus.CLOSED
+            || player1.portalService == ServiceStatus.COMPLETED
+            || player1.secondChanceService == ServiceStatus.CLOSED
+            || player1.secondChanceService == ServiceStatus.COMPLETED
         )
         {
             return
         }
 
-        player = createNewState( player )
+        player = createNewState( player1 )
 
         if ( player.newState == ServiceStatus.ACTIVE || player.newState == ServiceStatus.PREACTIVE || player.newState == ServiceStatus.SUSPEND )
         {
@@ -97,7 +97,7 @@ inputStream
             if ( program.restoreCsv )
             {
                 var currentCsv = csvLine = util.format( '%s,%s,%s,%s\n',
-                    player.accountEmail, player.portalService, player.secondChanceService, player.emailVerified )
+                    player1.accountEmail, player1.portalService, player1.secondChanceService, player1.emailVerified )
 
                 fs.appendFileSync( RESTORE_FILENAME, currentCsv, err =>
                 {
@@ -136,75 +136,76 @@ inputStream
  */
 function createNewState( player )
 {
-    player.newState = null
+    var newPlayer = Object.assign( {}, player )
+    newPlayer.newState = null
 
     // 1
-    if ( player.emailVerified && player.portalService == ServiceStatus.PREACTIVE && player.secondChanceService == ServiceStatus.PREACTIVE )
+    if ( newPlayer.emailVerified && newPlayer.portalService == ServiceStatus.PREACTIVE && newPlayer.secondChanceService == ServiceStatus.PREACTIVE )
     {
-        player.newState = ServiceStatus.SUSPEND
-        player.emailVerified = emailVerifiedStatus.VERIFIED
+        newPlayer.newState = ServiceStatus.SUSPEND
+        newPlayer.emailVerified = emailVerifiedStatus.VERIFIED
     }
     // 2
-    else if ( player.emailVerified && player.portalService == ServiceStatus.PREACTIVE && player.secondChanceService == ServiceStatus.ACTIVE )
+    else if ( newPlayer.emailVerified && newPlayer.portalService == ServiceStatus.PREACTIVE && newPlayer.secondChanceService == ServiceStatus.ACTIVE )
     {
-        player.newState = ServiceStatus.ACTIVE
-        player.emailVerified = emailVerifiedStatus.VERIFIED
+        newPlayer.newState = ServiceStatus.ACTIVE
+        newPlayer.emailVerified = emailVerifiedStatus.VERIFIED
     }
     // 3
-    else if ( !player.emailVerified && player.portalService == ServiceStatus.SUSPEND && player.secondChanceService == ServiceStatus.PREACTIVE )
+    else if ( !newPlayer.emailVerified && newPlayer.portalService == ServiceStatus.SUSPEND && newPlayer.secondChanceService == ServiceStatus.PREACTIVE )
     {
-        player.newState = ServiceStatus.PREACTIVE
-        player.emailVerified = emailVerifiedStatus.NOT_VERIFIED
+        newPlayer.newState = ServiceStatus.PREACTIVE
+        newPlayer.emailVerified = emailVerifiedStatus.NOT_VERIFIED
     }
     // 4
-    else if ( player.emailVerified && player.portalService == ServiceStatus.ACTIVE && player.secondChanceService == ServiceStatus.PREACTIVE )
+    else if ( newPlayer.emailVerified && newPlayer.portalService == ServiceStatus.ACTIVE && newPlayer.secondChanceService == ServiceStatus.PREACTIVE )
     {
-        player.newState = ServiceStatus.ACTIVE
-        player.emailVerified = emailVerifiedStatus.VERIFIED
+        newPlayer.newState = ServiceStatus.ACTIVE
+        newPlayer.emailVerified = emailVerifiedStatus.VERIFIED
     }
     // 5
-    else if ( player.emailVerified && player.portalService == ServiceStatus.SUSPEND && player.secondChanceService == ServiceStatus.PREACTIVE )
+    else if ( newPlayer.emailVerified && newPlayer.portalService == ServiceStatus.SUSPEND && newPlayer.secondChanceService == ServiceStatus.PREACTIVE )
     {
-        player.newState = ServiceStatus.SUSPEND
-        player.emailVerified = emailVerifiedStatus.VERIFIED
+        newPlayer.newState = ServiceStatus.SUSPEND
+        newPlayer.emailVerified = emailVerifiedStatus.VERIFIED
     }
     // 6
-    else if ( player.emailVerified && player.portalService == ServiceStatus.PREACTIVE && player.secondChanceService == ServiceStatus.SUSPEND )
+    else if ( newPlayer.emailVerified && newPlayer.portalService == ServiceStatus.PREACTIVE && newPlayer.secondChanceService == ServiceStatus.SUSPEND )
     {
-        player.newState = ServiceStatus.SUSPEND
-        player.emailVerified = emailVerifiedStatus.VERIFIED
+        newPlayer.newState = ServiceStatus.SUSPEND
+        newPlayer.emailVerified = emailVerifiedStatus.VERIFIED
     }
     // 7
-    else if ( player.emailVerified && player.portalService == ServiceStatus.ACTIVE && player.secondChanceService == ServiceStatus.SUSPEND )
+    else if ( newPlayer.emailVerified && newPlayer.portalService == ServiceStatus.ACTIVE && newPlayer.secondChanceService == ServiceStatus.SUSPEND )
     {
-        player.newState = ServiceStatus.SUSPEND
-        player.emailVerified = emailVerifiedStatus.VERIFIED
+        newPlayer.newState = ServiceStatus.SUSPEND
+        newPlayer.emailVerified = emailVerifiedStatus.VERIFIED
     }
     // 8
-    else if ( player.emailVerified && player.portalService == ServiceStatus.SUSPEND && player.secondChanceService == ServiceStatus.ACTIVE )
+    else if ( newPlayer.emailVerified && newPlayer.portalService == ServiceStatus.SUSPEND && newPlayer.secondChanceService == ServiceStatus.ACTIVE )
     {
-        player.newState = ServiceStatus.SUSPEND
-        player.emailVerified = emailVerifiedStatus.VERIFIED
+        newPlayer.newState = ServiceStatus.SUSPEND
+        newPlayer.emailVerified = emailVerifiedStatus.VERIFIED
     }
     // 9
-    else if ( !player.emailVerified && player.portalService == ServiceStatus.ACTIVE && player.secondChanceService == ServiceStatus.ACTIVE )
+    else if ( !newPlayer.emailVerified && newPlayer.portalService == ServiceStatus.ACTIVE && newPlayer.secondChanceService == ServiceStatus.ACTIVE )
     {
-        player.newState = ServiceStatus.PREACTIVE
-        player.emailVerified = emailVerifiedStatus.NOT_VERIFIED
+        newPlayer.newState = ServiceStatus.PREACTIVE
+        newPlayer.emailVerified = emailVerifiedStatus.NOT_VERIFIED
     }
     // 10
-    else if ( player.emailVerified && player.portalService == ServiceStatus.SUSPEND && player.secondChanceService == ServiceStatus.SUSPEND )
+    else if ( newPlayer.emailVerified && newPlayer.portalService == ServiceStatus.SUSPEND && newPlayer.secondChanceService == ServiceStatus.SUSPEND )
     {
         // ignore
     }
     // 11
-    else if ( !player.emailVerified && player.portalService == ServiceStatus.SUSPEND && player.secondChanceService == ServiceStatus.SUSPEND )
+    else if ( !newPlayer.emailVerified && newPlayer.portalService == ServiceStatus.SUSPEND && newPlayer.secondChanceService == ServiceStatus.SUSPEND )
     {
-        player.newState = ServiceStatus.SUSPEND
-        player.emailVerified = emailVerifiedStatus.VERIFIED
+        newPlayer.newState = ServiceStatus.SUSPEND
+        newPlayer.emailVerified = emailVerifiedStatus.VERIFIED
     }
 
-    return player
+    return newPlayer
 }
 
 function createServiceCsvHeader()
@@ -263,14 +264,11 @@ function convertCsvRecordToPlayer( csvRecord )
     var player =
     {
         contractIdentity: csvRecord.CONTRACT_IDENTITY.trim(),
-        contractLastUpdated: csvRecord.C_LAST_UPDATED.trim(),
         contractId: parseInt( csvRecord.CONTRACT_ID.trim() ),
         accountEmail: csvRecord.ACCOUNT_EMAIL.trim(),
         emailVerified: parseInt( csvRecord.EMAIL_VERIFIED.trim() ),
-        customerContactsLastUpdated: csvRecord.CC_LAST_UPDATED.trim(),
         portalService: 0,
-        secondChanceService: 0,
-        customerServiceLastUpdated: csvRecord.CS_LAST_UPDATED.trim()
+        secondChanceService: 0
     }
 
     if ( csvRecord.SERVICE_TYPE_IDS.match( "^1, 500" ) && csvRecord.SERVICE_STATUS_IDS.includes( ',' ) )

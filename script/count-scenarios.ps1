@@ -32,7 +32,7 @@ function showHelp()
 
 if ($h -or $help) {showHelp}
 
-$scenarios = Get-Content scenarios.csv
+$scenarios = Get-Content ($ScriptDir + '/scenarios.csv')
 $format = "{0,8}  {1,5}`n"
 
 if ($csv) { $format = "{0},{1}`n" }
