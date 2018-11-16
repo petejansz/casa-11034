@@ -1,5 +1,5 @@
 --!!! UNCOMMENT THE EXPORT STATEMENT !!!
---EXPORT TO all-player-status.del OF DEL
+EXPORT TO all-player-status.del OF DEL
 
 select
     CONTRACT_IDENTITY,
@@ -20,7 +20,7 @@ from (
         inner join GMS4.sms_customer_contacts cc on cc.contract_id = cs.contract_id
         inner join GMS4.sms_contracts c on c.contract_id = cc.contract_id
         where
-            c.contract_status_id != 6 and -- hidden
+            c.contract_status_id != 6 and -- not hidden
             cc.contact_type_id = 1 and
             cs.service_type_id in ( 1, 500 )    -- PP or SC
 
