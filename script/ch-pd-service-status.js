@@ -1,11 +1,11 @@
 /**
  * Author: Pete Jansz
 */
-const modulesPath = '/usr/share/node_modules/'
+
 var fs = require( 'fs' )
 var util = require( 'util' )
-var csv = require( modulesPath + 'csv-parser' )
-var program = require( modulesPath + 'commander' )
+var csv = require( 'csv-parser' )
+var program = require( 'commander' )
 var chPdService = require( process.env.USERPROFILE + '/Documents/Projects/igt/pd/casa-11034/script/' + 'lib-ch-pd-service-status' )
 const RESTORE_FILENAME = 'ca_updateservice_restore.csv'
 
